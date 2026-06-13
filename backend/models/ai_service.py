@@ -8,7 +8,7 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 def segment_from_nl(query: str, db_context: str):
     prompt = f"""
     You are a marketing AI assistant. Convert the marketer's text query into a segment JSON.
-    Only use terminology like "shoppers", "campaigns", "engagement". Do not use "leads" or "pipeline".
+    Only use terminology like "shoppers", "campaigns", "engagement". Do not use any B2B sales terms.
     
     Query: "{query}"
     
@@ -66,7 +66,7 @@ def refine_message(original: str, feedback: str, channel: str):
 def campaign_insights(question: str, stats_context: str):
     prompt = f"""
     Answer the marketer's question about their campaign engagement.
-    Use terms "shoppers", "campaigns", "engagement". NEVER use "leads" or "pipeline".
+    Use terms "shoppers", "campaigns", "engagement". NEVER use B2B terms like sales or funnels.
     Keep it to 2-3 plain English sentences.
     
     Stats context: {stats_context}
@@ -81,7 +81,7 @@ def campaign_insights(question: str, stats_context: str):
 def diagnose_shopper(profile: str, reviews: str, channel_stats: str, inactive_days: int):
     prompt = f"""
     Analyze this shopper's engagement and output a structured JSON diagnostic.
-    Use terms "shoppers", "engagement". NEVER use "lead score" or "conversion" or "pipeline".
+    Use terms "shoppers", "engagement". NEVER use conversion or B2B terminology.
     
     Shopper Profile: {profile}
     Recent Reviews: {reviews}

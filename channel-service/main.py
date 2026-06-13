@@ -57,4 +57,4 @@ async def simulate_message_lifecycle(payload: MessagePayload):
 @app.post("/send", status_code=status.HTTP_202_ACCEPTED)
 async def queue_message_simulation(payload: MessagePayload, background_tasks: BackgroundTasks):
     background_tasks.add_task(simulate_message_lifecycle, payload)
-    return {"status": "accepted", "message": "Simulation pipeline asynchronously initialized."}
+    return {"status": "accepted", "message": "Simulation workflow asynchronously initialized."}

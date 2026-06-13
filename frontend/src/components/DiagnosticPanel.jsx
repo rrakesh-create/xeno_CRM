@@ -96,7 +96,7 @@ export default function DiagnosticPanel({ diagnostic, onStartCampaign }) {
               </div>
               {i === 0 && (
                 <button className="btn-primary" onClick={() => onStartCampaign(act)}>
-                  <PlayCircle size={18} /> Start campaign
+                  <PlayCircle size={18} /> Start campaign for this shopper
                 </button>
               )}
             </div>

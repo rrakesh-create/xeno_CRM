@@ -1,5 +1,7 @@
 # Xeno CRM
 
+> **Note on Free-Tier Deployment**: First initial database query execution may experience a 30–50 second delay on free-tier services while instances spin up.
+
 A consumer marketing and engagement tool built for marketers to find shoppers, send personalized messages, watch delivery happen live, and understand engagement behavior.
 
 ## Architecture Overview
@@ -76,4 +78,4 @@ npm run dev
 ## What is deliberately not built
 - No user authentication or authorization.
 - No real messaging (WhatsApp/SMS APIs).
-- No sales CRM elements (no leads, deals, tickets, or pipelines).
+- No B2B terms (no tickets or stages).

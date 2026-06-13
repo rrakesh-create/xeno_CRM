@@ -145,7 +145,7 @@ def launch_campaign(id: str, background_tasks: BackgroundTasks, db: Session = De
     campaign.audience_size = len(shoppers)
     db.commit()
     
-    # Delegate the mass multi-recipient send pipeline to FastAPI's background threads
+    # Delegate the mass multi-recipient send workflow to FastAPI's background threads
     channel_url = os.environ.get("CHANNEL_SERVICE_URL", "http://localhost:8001")
     background_tasks.add_task(
         transmit_bulk_staggered_messages, 
