@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, Megaphone, Zap, Star, Sun, Moon, ChevronLeft, C
 
 export default function Sidebar({ isSidebarCollapsed, toggleSidebar, theme, toggleTheme }) {
   return (
-    <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`} style={{ marginTop: '30px' }}>
+    <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <Zap size={26} color="#60a5fa" style={{ flexShrink: 0 }} />

@@ -32,7 +32,7 @@ export default function MainLayout() {
         toggleTheme={toggleTheme} 
       />
 
-      <main className="main-content" style={{ marginTop: '30px' }}>
+      <main className="main-content">
         <Outlet />
       </main>
 

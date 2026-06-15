@@ -739,3 +739,71 @@ body {
   animation: spin 1s linear infinite;
 }
 
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100% !important;
+    height: auto;
+    flex-direction: row;
+    padding: 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+  }
+  
+  .sidebar.collapsed {
+    padding: 12px;
+  }
+
+  .sidebar-header {
+    width: auto;
+    flex-direction: row !important;
+    margin-bottom: 0;
+  }
+
+  .sidebar-logo span {
+    display: none; /* Hide text on mobile */
+  }
+
+  .nav-links {
+    flex-direction: row;
+    overflow-x: auto;
+    flex: 1;
+    gap: 8px;
+    padding-bottom: 4px;
+    align-items: center;
+  }
+
+  .nav-link {
+    padding: 8px;
+    border-radius: 50%;
+  }
+
+  .nav-link span {
+    display: none; /* Icons only on mobile nav */
+  }
+
+  .sidebar-footer {
+    border-top: none;
+    border-left: 1px solid var(--border-color);
+    padding-top: 0;
+    padding-left: 12px;
+    margin-top: 0;
+    width: auto;
+  }
+
+  .main-content {
+    padding: 16px;
+    margin-top: 0;
+  }
+  
+  .collapse-toggle-btn {
+    display: none; /* No collapse button needed on mobile row */
+  }
+}

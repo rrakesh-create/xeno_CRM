@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 import { Award, Zap, ChevronRight, Activity, TrendingUp } from 'lucide-react';
 
 export default function BrandInsights() {
@@ -14,7 +14,7 @@ export default function BrandInsights() {
 
   const fetchBrandInsights = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/ai/brand-insights');
+      const res = await api.get('/ai/brand-insights');
       setInsights(res.data);
     } catch (err) {
       console.error(err);
