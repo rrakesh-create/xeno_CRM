@@ -1,7 +1,17 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Xeno CRM API")
+root_path = "/_/backend" if os.environ.get("VERCEL") else ""
+app = FastAPI(title="Xeno CRM API", root_path=root_path)
+
+@app.middleware("http")
+async def strip_vercel_prefix(request: Request, call_next):
+    if os.environ.get("VERCEL") and request.scope["path"].startswith("/_/backend"):
+        request.scope["path"] = request.scope["path"][len("/_/backend"):]
+        if "raw_path" in request.scope:
+            request.scope["raw_path"] = request.scope["path"].encode()
+    return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,
