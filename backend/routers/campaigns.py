@@ -77,35 +77,27 @@ def resolve_segment_shoppers(db: Session, filters_str: str):
         
     return query.all()
 
-async def transmit_bulk_staggered_messages(campaign_id: str, message_template: str, channel: str, shoppers: list, channel_url: str):
+async def transmit_bulk_staggered_messages(campaign_id: str, message_template: str, channel: str, shoppers: list, channel_url: str, db: Session):
     """
-    Executes a multi-recipient message loop. Uses a 50ms stagger step 
-    to avoid overloading the receipt handler webhooks.
+    Executes a multi-recipient message loop.
+    Uses bulk insertion to prevent SQLite locking issues on Vercel.
     """
     async with httpx.AsyncClient() as client:
         for s in shoppers:
-            # Removed 50ms stagger step to prevent Vercel serverless function timeout
+            # 3. Handle dynamic name substitution personalizations inline
+            personalized_text = message_template.replace("{name}", s.name)
             
-            # 2. Open an isolated database session thread for each record to prevent race conditions
-            db = SessionLocal()
-            try:
-                # 3. Handle dynamic name substitution personalizations inline
-                personalized_text = message_template.replace("{name}", s.name)
-                
-                # 4. Insert an individual row into the communications tracking matrix
-                comm = Communication(
-                    id=str(uuid.uuid4()),
-                    campaign_id=campaign_id,
-                    customer_id=s.id,
-                    personalized_message=personalized_text,
-                    channel=channel,
-                    status="sent" # Moves immediately from pending to sent
-                )
-                db.add(comm)
-                db.commit()
-                communication_id = comm.id
-            finally:
-                db.close()
+            # 4. Insert an individual row into the communications tracking matrix
+            communication_id = str(uuid.uuid4())
+            comm = Communication(
+                id=communication_id,
+                campaign_id=campaign_id,
+                customer_id=s.id,
+                personalized_message=personalized_text,
+                channel=channel,
+                status="sent" # Moves immediately from pending to sent
+            )
+            db.add(comm)
             
             # 5. Dispatch the tracking data structure over to the isolated Channel service
             if not os.environ.get("VERCEL"):
@@ -145,7 +137,6 @@ async def launch_campaign(id: str, db: Session = Depends(get_db)):
     campaign.audience_size = len(shoppers)
     db.commit()
     
-    # Delegate the mass multi-recipient send workflow
     # Must be awaited synchronously in Vercel Serverless functions
     channel_url = os.environ.get("CHANNEL_SERVICE_URL", "http://localhost:8001")
     await transmit_bulk_staggered_messages(
@@ -153,8 +144,12 @@ async def launch_campaign(id: str, db: Session = Depends(get_db)):
         message_template=campaign.message_template, 
         channel=campaign.channel, 
         shoppers=shoppers, 
-        channel_url=channel_url
+        channel_url=channel_url,
+        db=db
     )
+    
+    # Commit all the communication rows in bulk to prevent SQLite locking
+    db.commit()
     
     return {
         "status": "running",
