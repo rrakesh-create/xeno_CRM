@@ -84,8 +84,7 @@ async def transmit_bulk_staggered_messages(campaign_id: str, message_template: s
     """
     async with httpx.AsyncClient() as client:
         for s in shoppers:
-            # 1. Enforce a clean 50ms stagger pause between messages to regulate burst volume
-            await asyncio.sleep(0.05)
+            # Removed 50ms stagger step to prevent Vercel serverless function timeout
             
             # 2. Open an isolated database session thread for each record to prevent race conditions
             db = SessionLocal()
@@ -123,10 +122,10 @@ async def transmit_bulk_staggered_messages(campaign_id: str, message_template: s
                 pass  # Suppress individual network drops so the remaining batch loop can finish safely
 
 @router.post("/{id}/send")
-def launch_campaign(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def launch_campaign(id: str, db: Session = Depends(get_db)):
     """
     Accepts a single request, calculates category audience sizes, 
-    and defers the execution loop to non-blocking background workers.
+    and executes the send loop synchronously for Vercel.
     """
     campaign = db.query(Campaign).filter(Campaign.id == id).first()
     if not campaign:
@@ -145,10 +144,10 @@ def launch_campaign(id: str, background_tasks: BackgroundTasks, db: Session = De
     campaign.audience_size = len(shoppers)
     db.commit()
     
-    # Delegate the mass multi-recipient send workflow to FastAPI's background threads
+    # Delegate the mass multi-recipient send workflow
+    # Must be awaited synchronously in Vercel Serverless functions
     channel_url = os.environ.get("CHANNEL_SERVICE_URL", "http://localhost:8001")
-    background_tasks.add_task(
-        transmit_bulk_staggered_messages, 
+    await transmit_bulk_staggered_messages(
         campaign_id=campaign.id, 
         message_template=campaign.message_template, 
         channel=campaign.channel, 
