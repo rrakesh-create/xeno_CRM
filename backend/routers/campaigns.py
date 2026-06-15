@@ -108,18 +108,19 @@ async def transmit_bulk_staggered_messages(campaign_id: str, message_template: s
                 db.close()
             
             # 5. Dispatch the tracking data structure over to the isolated Channel service
-            payload = {
-                "communication_id": communication_id,
-                "channel": channel.lower(),
-                "callback_url": os.environ.get("CRM_RECEIPT_URL", "http://localhost:8000/receipts")
-            }
-            
-            try:
-                # Fire-and-forget call to the mock gateway router running on port 8001
-                print(f"[Campaign {campaign_id}] Dispatching message to {s.name} (ID: {communication_id})")
-                await client.post(f"{channel_url}/send", json=payload, timeout=0.5)
-            except Exception:
-                pass  # Suppress individual network drops so the remaining batch loop can finish safely
+            if not os.environ.get("VERCEL"):
+                payload = {
+                    "communication_id": communication_id,
+                    "channel": channel.lower(),
+                    "callback_url": os.environ.get("CRM_RECEIPT_URL", "http://localhost:8000/receipts")
+                }
+                
+                try:
+                    # Fire-and-forget call to the mock gateway router running on port 8001
+                    print(f"[Campaign {campaign_id}] Dispatching message to {s.name} (ID: {communication_id})")
+                    await client.post(f"{channel_url}/send", json=payload, timeout=0.5)
+                except Exception:
+                    pass  # Suppress individual network drops so the remaining batch loop can finish safely
 
 @router.post("/{id}/send")
 async def launch_campaign(id: str, db: Session = Depends(get_db)):
