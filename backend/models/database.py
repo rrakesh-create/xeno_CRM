@@ -1,9 +1,20 @@
+import os
+import shutil
 import uuid
 import datetime
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, Text
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-DATABASE_URL = "sqlite:///./xeno_crm.db"
+if os.environ.get("VERCEL"):
+    db_path = "/tmp/xeno_crm.db"
+    if not os.path.exists(db_path):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        source_db = os.path.join(base_dir, "xeno_crm.db")
+        if os.path.exists(source_db):
+            shutil.copy(source_db, db_path)
+    DATABASE_URL = f"sqlite:///{db_path}"
+else:
+    DATABASE_URL = "sqlite:///./xeno_crm.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
