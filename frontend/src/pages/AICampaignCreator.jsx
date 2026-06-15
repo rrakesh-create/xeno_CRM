@@ -12,7 +12,6 @@ export default function AICampaignCreator() {
   const [messageDraft, setMessageDraft] = useState('');
   const [tone, setTone] = useState('Balanced');
   const [channel, setChannel] = useState('whatsapp');
-  const [prediction, setPrediction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Debounced Tone Modulator Execution Sequence
@@ -36,17 +35,13 @@ export default function AICampaignCreator() {
       // Step 1: Hit Gemini natural language segment builder endpoint
       const segRes = await axios.post('http://localhost:8000/ai/segment', { prompt: currentInput });
       setSegmentData(segRes.data);
-      setMessages(prev => [...prev, { sender: 'ai', text: `Category isolated: "${segRes.data.label}". ${segRes.data.explanation}` }]);
+      setMessages(prev => [...prev, { sender: 'ai', text: `Category isolated: "${segRes.data.label}". ${segRes.data.explanation} This campaign will be sent to ${segRes.data.customer_count} customers.` }]);
 
       // Step 2: Extract campaign copywriting options
       const copyRes = await axios.post('http://localhost:8000/ai/draft-message', {
         label: segRes.data.label, channel: channel, tone: tone
       });
       setMessageDraft(copyRes.data.message);
-
-      // Step 3: Trigger what-if financial forecasting predictions
-      const predRes = await axios.post('http://localhost:8000/ai/what-if', { size: 34, avg_spend: 1850.0 });
-      setPrediction(predRes.data);
 
     } catch (err) {
       console.error("AI Generation loop error:", err);
@@ -57,6 +52,10 @@ export default function AICampaignCreator() {
 
   const regenerateMessageCopy = async () => {
     if (!segmentData) return;
+    
+    setIsLoading(true);
+    setMessageDraft("Applying new tone profile and regenerating campaign draft...");
+    
     try {
       const copyRes = await axios.post('http://localhost:8000/ai/draft-message', {
         label: segmentData.label, channel: channel, tone: tone
@@ -64,6 +63,9 @@ export default function AICampaignCreator() {
       setMessageDraft(copyRes.data.message);
     } catch (err) {
       console.error(err);
+      setMessageDraft("Failed to generate campaign draft. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -83,7 +85,6 @@ export default function AICampaignCreator() {
       await axios.post(`http://localhost:8000/campaigns/${draftCampaign.data.id}/send`);
       setMessages(prev => [...prev, { sender: 'ai', text: '🚀 Mass category blast successfully dispatched! Monitor delivery metrics inside the Campaigns panel.' }]);
       setSegmentData(null);
-      setPrediction(null);
       setMessageDraft('');
     } catch (err) {
       console.error(err);
@@ -93,76 +94,104 @@ export default function AICampaignCreator() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 font-sans">
-      <h2 className="text-xl font-bold border-b pb-3 mb-4 text-zinc-800">Conversational AI Campaign Creator</h2>
+    <div className="campaign-creator-layout">
+      <h2 className="campaign-creator-header">Conversational AI Campaign Creator</h2>
       
-      <div className="border rounded-lg p-4 h-80 overflow-y-auto mb-4 bg-zinc-50 space-y-3">
-        {messages.map((m, idx) => (
-          <div key={idx} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <span className={`inline-block p-3 rounded-xl max-w-md shadow-sm text-sm ${m.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-zinc-200 text-zinc-900'}`}>
-              {m.text}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {prediction && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-lg mb-4 text-sm shadow-inner">
-          <p className="font-semibold">📊 AI Estimate Projections:</p>
-          <p>Projected Read Count: <strong>{prediction.projected_open_count} shoppers</strong> · Estimated Conversion Range: <strong>₹{prediction.min_projected_revenue} - ₹{prediction.max_projected_revenue}</strong>.</p>
-          <span className="text-xs text-amber-600 italic block mt-1">Estimates are based on historical segment behavior benchmarks. These fields are performance projections and completely non-guaranteed.</span>
-        </div>
-      )}
-
-      {segmentData && (
-        <div className="bg-white border p-4 rounded-lg shadow-sm mb-4">
-          <h4 className="text-sm font-bold text-zinc-700 mb-2">Segment Audience Preview:</h4>
-          <div className="flex gap-2 flex-wrap">
-            {['A', 'V', 'S', 'P', 'R'].map((initial, i) => (
-              <div key={i} className="flex items-center gap-2 bg-zinc-100 p-2 rounded-full pr-4 border hover:bg-zinc-200 cursor-pointer transition">
-                <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-sm">
-                  {initial}
-                </div>
-                <span className="text-sm font-medium text-zinc-700">Shopper {i+1}</span>
+      <div className="campaign-creator-grid">
+        {/* Left Column */}
+        <div className="campaign-left-panel">
+          <div className="chat-container">
+            {messages.map((m, idx) => (
+              <div key={idx} className={`chat-message-wrapper ${m.sender}`}>
+                <span className={`chat-message ${m.sender}`}>
+                  {m.text}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
 
-      {messageDraft && (
-        <div className="bg-white border p-4 rounded-lg shadow-sm mb-4 space-y-3">
-          <h4 className="text-sm font-bold text-zinc-700">Dynamic Campaign Content Blueprint:</h4>
-          <textarea className="w-full p-2 border rounded-md text-sm font-mono" rows={3} value={messageDraft} onChange={(e) => setMessageDraft(e.target.value)} />
-          
-          <div className="flex justify-between items-center text-xs text-zinc-600">
-            <div className="flex items-center gap-2">
-              <label>Tone Slider:</label>
-              <input type="range" min="1" max="10" className="w-24" onChange={(e) => setTone(e.target.value > 5 ? 'Playful' : 'Formal')} />
-              <span className="font-semibold text-indigo-600">{tone}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label>Delivery Node Channel:</label>
-              <select className="border rounded p-1 bg-white" value={channel} onChange={(e) => setChannel(e.target.value)}>
-                <option value="whatsapp">WhatsApp App Link</option>
-                <option value="sms">SMS Text Network</option>
-                <option value="email">Electronic Mail</option>
-                <option value="rcs">RCS Rich Media</option>
-              </select>
-            </div>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px'}}>
+            {['Festival offer to all customers', 'Target high-value shoppers', 'Win-back churned users', 'Cart abandoners follow-up'].map((quickPrompt, i) => (
+              <button 
+                key={i}
+                onClick={() => setInput(quickPrompt)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  background: 'var(--surface-border)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  color: 'var(--text-main)'
+                }}
+              >
+                {quickPrompt}
+              </button>
+            ))}
           </div>
-          
-          <button onClick={executeOneClickGroupBlast} disabled={isLoading} className="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-md hover:bg-emerald-700 transition active:scale-[0.995]">
-            🚀 Launch Campaign (One-Click Bulk Send)
-          </button>
-        </div>
-      )}
 
-      <div className="flex gap-2">
-        <input className="flex-1 p-3 border rounded-md text-sm shadow-sm" type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type marketing objective (e.g., Target shoppers in Chennai with spend > 4000)..." onKeyDown={(e) => e.key === 'Enter' && handleSendMessageIntent()} />
-        <button onClick={handleSendMessageIntent} disabled={isLoading} className="px-5 bg-indigo-600 text-white text-sm font-bold rounded-md hover:bg-indigo-700 transition">
-          {isLoading ? 'Processing...' : 'Send Prompt'}
-        </button>
+          <div className="input-area" style={{marginTop: 0}}>
+            <input 
+              id="campaign-prompt-input"
+              className="prompt-input" 
+              type="text" 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              placeholder="Type marketing objective..." 
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessageIntent()} 
+            />
+            <button id="btn-send-prompt" onClick={handleSendMessageIntent} disabled={isLoading} className="btn-send">
+              {isLoading ? 'Processing...' : 'Send Prompt'}
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="campaign-right-panel">
+          <div className="draft-blueprint" style={{marginBottom: 0, flex: 1}}>
+            <h4>Output Template Block</h4>
+            <textarea 
+              id="campaign-blueprint-textarea"
+              className="blueprint-textarea" 
+              rows={10} 
+              value={messageDraft} 
+              onChange={(e) => setMessageDraft(e.target.value)} 
+              placeholder="Your campaign message will appear here after generating a prompt..."
+              disabled={!messageDraft && !isLoading}
+            />
+            
+            <div className="blueprint-controls">
+              <div className="control-group">
+                <label>Tone Slider:</label>
+                <input 
+                  id="tone-slider"
+                  type="range" min="1" max="10" defaultValue="5"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (val <= 3) setTone('Highly Professional & Direct');
+                    else if (val <= 6) setTone('Conversational & Helpful');
+                    else if (val <= 8) setTone('Friendly & Enthusiastic');
+                    else setTone('Playful & Edgy');
+                  }} 
+                />
+                <span style={{fontWeight: 600, color: 'var(--primary)', minWidth: '180px'}}>{tone}</span>
+              </div>
+              <div className="control-group">
+                <label>Channel Node Switcher:</label>
+                <select id="channel-switcher" value={channel} onChange={(e) => setChannel(e.target.value)}>
+                  <option value="whatsapp">WhatsApp App Link</option>
+                  <option value="sms">SMS Text Network</option>
+                  <option value="email">Electronic Mail</option>
+                  <option value="rcs">RCS Rich Media</option>
+                </select>
+              </div>
+            </div>
+            
+            <button id="btn-launch-campaign" onClick={executeOneClickGroupBlast} disabled={isLoading || !messageDraft} className="btn-launch">
+              🚀 Launch Campaign (One-Click Bulk Send)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

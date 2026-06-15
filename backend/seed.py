@@ -3,7 +3,7 @@ import uuid
 import json
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from models.database import engine, Base, Customer, Order, Campaign, Communication, Receipt
+from models.database import engine, Base, Customer, Order, Campaign, Communication, Receipt, Feedback
 
 # Initialize DB
 Base.metadata.drop_all(bind=engine)
@@ -55,8 +55,8 @@ def generate_rating():
 customers = []
 orders_list = []
 
-# Generate 90 customers
-for i in range(90):
+# Generate 150 customers
+for i in range(150):
     c_id = str(uuid.uuid4())
     name = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
     city = random.choice(CITIES)
@@ -113,6 +113,69 @@ session.add_all(customers)
 session.add_all(orders_list)
 session.commit()
 
+# Generate feedback for some customers
+feedbacks = []
+feedback_comments = {
+    5: [
+        "Amazing fabric quality! Very satisfied.",
+        "Fast delivery and great fit. Perfect product!",
+        "Beautiful design, absolutely love it.",
+        "Highly recommend to everyone, perfect brand quality.",
+        "Perfect for the festive season! Amazing delivery speed."
+    ],
+    4: [
+        "Good product overall. Nice material.",
+        "Nice material but packaging could be better.",
+        "Looks just like the picture, good design.",
+        "Satisfied with the purchase, good service.",
+        "Fits well, color is nice. Happy with quality."
+    ],
+    3: [
+        "Average quality stitching. Okay product.",
+        "Color is slightly different than shown. Average fabric.",
+        "Okay product for the price, not bad.",
+        "Took a bit long to deliver, average packaging.",
+        "Not bad, but could be improved. Average fit."
+    ],
+    2: [
+        "Damaged packaging when it arrived. Poor quality.",
+        "Wrong size sent, very poor service.",
+        "Thin material, expected better fabric.",
+        "Stitching came off after one wash. Terrible.",
+        "Disappointed with the quality. Poor packaging."
+    ],
+    1: [
+        "Completely wrong item received. Terrible service.",
+        "Very poor quality, do not buy this defective item.",
+        "Terrible customer service. Delay in delivery.",
+        "Total waste of money. Poor fabric quality.",
+        "Defective piece received, poor stitching."
+    ]
+}
+
+# Seed feedback for ~45 customers (~50%)
+feedback_customers = random.sample(customers, 45)
+for fc in feedback_customers:
+    rating = generate_rating()
+    comment = random.choice(feedback_comments[rating]) if random.random() > 0.1 else None # 90% leave comments
+    f_date = fc.last_order + timedelta(days=random.randint(1, 5))
+    if f_date > datetime.utcnow():
+        f_date = datetime.utcnow()
+        
+    feedbacks.append(Feedback(
+        id=str(uuid.uuid4()),
+        customer_id=fc.id,
+        rating=rating,
+        comment=comment,
+        consent_given=1,
+        created_at=f_date
+    ))
+
+session.add_all(feedbacks)
+session.commit()
+print(f"Successfully seeded {len(feedbacks)} customer feedbacks!")
+
+
 # Seed 3 pre-completed campaigns
 campaigns = [
     {
@@ -125,7 +188,7 @@ campaigns = [
     },
     {
         "name": "Flash Sale - Kurtis", "segment_label": "All Shoppers",
-        "channel": "SMS", "status": "completed", "audience_size": 90, "days_ago": 2
+        "channel": "SMS", "status": "completed", "audience_size": 150, "days_ago": 2
     }
 ]
 
@@ -178,4 +241,4 @@ for camp_data in campaigns:
     session.add_all(receipts)
 
 session.commit()
-print("Successfully seeded 90 shoppers, orders with reviews, and 3 completed campaigns!")
+print("Successfully seeded 150 shoppers, orders with reviews, and 3 completed campaigns!")

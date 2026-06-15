@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { getCustomerStats, getCampaigns, aiInsights } from '../lib/api';
-import { Users, DollarSign, ShoppingBag, AlertTriangle, Send, Zap } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { getCustomerStats, getCampaigns } from '../lib/api';
+import { Users, DollarSign, ShoppingBag, AlertTriangle } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
-  const [chatQuestion, setChatQuestion] = useState('');
-  const [chatAnswer, setChatAnswer] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
+  const [showPercent, setShowPercent] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -31,29 +29,29 @@ export default function Dashboard() {
     }
   };
 
-  const handleAsk = async (question) => {
-    if (!question) return;
-    setChatLoading(true);
-    setChatQuestion(question);
-    try {
-      const recentCamp = campaigns.length > 0 ? campaigns[0].id : '';
-      const res = await aiInsights(question, recentCamp);
-      setChatAnswer(res.data.answer);
-    } catch (err) {
-      setChatAnswer("Sorry, I couldn't process that right now.");
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
-  const chartData = campaigns.slice(0, 5).map(c => ({
-    name: c.name.substring(0, 10) + '...',
-    delivered: c.stats.delivered,
-    opened: c.stats.opened,
-    clicked: c.stats.clicked
-  }));
+  const chartData = campaigns.slice(0, 5).map(c => {
+    const total = c.audience_size || 1;
+    if (showPercent) {
+      return {
+        name: c.name.substring(0, 15) + '...',
+        'Delivered (%)': Math.round((c.stats.delivered / total) * 100),
+        'Opened (%)': Math.round((c.stats.opened / total) * 100),
+        'Clicked (%)': Math.round((c.stats.clicked / total) * 100),
+        'Failed (%)': Math.round((c.stats.failed / total) * 100)
+      };
+    } else {
+      return {
+        name: c.name.substring(0, 15) + '...',
+        'Sent (Audience)': c.audience_size,
+        'Delivered': c.stats.delivered,
+        'Opened': c.stats.opened,
+        'Clicked': c.stats.clicked,
+        'Failed': c.stats.failed
+      };
+    }
+  });
 
   const calcAverages = () => {
     if (campaigns.length === 0) return { del: 0, opn: 0, clk: 0 };
@@ -99,15 +97,52 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px', marginBottom: '32px' }}>
         <div className="glass-panel" style={{ padding: '24px', height: '400px' }}>
-          <h3 style={{ marginBottom: '24px', fontSize: '18px' }}>Recent Campaign Performance</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px' }}>Recent Campaign Performance</h3>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-card-hover)', padding: '4px', borderRadius: '8px' }}>
+              <button 
+                onClick={() => setShowPercent(false)} 
+                style={{ 
+                  background: !showPercent ? 'var(--bg-card)' : 'none', 
+                  border: 'none', 
+                  color: 'var(--text-primary)', 
+                  padding: '4px 10px', 
+                  borderRadius: '6px', 
+                  fontSize: '11px', 
+                  fontWeight: !showPercent ? 600 : 400,
+                  cursor: 'pointer' 
+                }}
+              >
+                Counts
+              </button>
+              <button 
+                onClick={() => setShowPercent(true)} 
+                style={{ 
+                  background: showPercent ? 'var(--bg-card)' : 'none', 
+                  border: 'none', 
+                  color: 'var(--text-primary)', 
+                  padding: '4px 10px', 
+                  borderRadius: '6px', 
+                  fontSize: '11px', 
+                  fontWeight: showPercent ? 600 : 400,
+                  cursor: 'pointer' 
+                }}
+              >
+                Rates (%)
+              </button>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height="80%">
             <BarChart data={chartData}>
               <XAxis dataKey="name" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
-              <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px'}} />
-              <Bar dataKey="delivered" fill="#3b82f6" radius={[4,4,0,0]} />
-              <Bar dataKey="opened" fill="#10b981" radius={[4,4,0,0]} />
-              <Bar dataKey="clicked" fill="#f59e0b" radius={[4,4,0,0]} />
+              <YAxis stroke="#94a3b8" unit={showPercent ? "%" : ""} />
+              <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff'}} />
+              <Legend verticalAlign="top" height={36} />
+              {!showPercent && <Bar dataKey="Sent (Audience)" fill="#94a3b8" radius={[4,4,0,0]} />}
+              <Bar dataKey={showPercent ? "Delivered (%)" : "Delivered"} fill="#3b82f6" radius={[4,4,0,0]} />
+              <Bar dataKey={showPercent ? "Opened (%)" : "Opened"} fill="#10b981" radius={[4,4,0,0]} />
+              <Bar dataKey={showPercent ? "Clicked (%)" : "Clicked"} fill="#f59e0b" radius={[4,4,0,0]} />
+              <Bar dataKey={showPercent ? "Failed (%)" : "Failed"} fill="#ef4444" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -168,38 +203,7 @@ export default function Dashboard() {
         </table>
       </div>
 
-      {/* Pinned Insights Chat Widget */}
-      <div className="glass-panel ai-chat-box" style={{ padding: '24px', position: 'sticky', bottom: '24px' }}>
-        <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={18} color="#f59e0b" /> Campaign Insights AI
-        </h3>
-        
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          {["Which campaign had the highest open rate?", "Why did the recent campaign fail to deliver?", "What is the average engagement for SMS?"].map((q, i) => (
-            <button key={i} onClick={() => handleAsk(q)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '6px 12px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px' }}>
-              {q}
-            </button>
-          ))}
-        </div>
 
-        {chatAnswer && (
-          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', marginBottom: '16px', borderLeft: '3px solid var(--accent-primary)', fontSize: '14px', lineHeight: '1.5' }}>
-            {chatAnswer}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <input 
-            type="text" 
-            className="input-field" 
-            placeholder="Ask anything about your campaigns and shopper engagement..." 
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAsk(e.target.value); }}
-          />
-          <button className="btn-primary" disabled={chatLoading} onClick={() => handleAsk(document.querySelector('.ai-chat-box input').value)}>
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -74,8 +74,20 @@ class Receipt(Base):
     status = Column(String, nullable=False)
     received_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=True) # Nullable for GDPR/anonymity
+    rating = Column(Integer, nullable=False)
+    comment = Column(Text, nullable=True)
+    consent_given = Column(Integer, default=1) # 1 for True, 0 for False (standard SQLite representation)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    customer = relationship("Customer")
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+
 
 def get_db():
     db = SessionLocal()

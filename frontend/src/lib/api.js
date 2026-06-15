@@ -27,4 +27,11 @@ export const aiWhatIf = (data) => api.post('/ai/what-if', data);
 export const aiInsights = (question, campaign_id) => api.post('/ai/insights', { question, campaign_id });
 export const aiDiagnose = (customer_id) => api.post(`/ai/diagnose/${customer_id}`);
 
+export const getFeedbacks = (params) => api.get('/feedback/', { params });
+export const submitFeedback = (data) => api.post('/feedback/', data);
+export const getFeedbackAnalysis = () => api.get('/feedback/analysis');
+export const deleteFeedback = (id) => api.delete(`/feedback/${id}`);
+export const exportFeedbackCSV = () => `${API_URL}/feedback/export`;
+
 export default api;
+
